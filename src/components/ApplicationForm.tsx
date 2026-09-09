@@ -27,6 +27,10 @@ const EMPTY_FORM: ApplicationFormValues = {
   notes: "",
 };
 
+const FIELD =
+  "h-12 w-full rounded-[24px] bg-soft-cloud px-4 text-base text-ink outline-none transition focus:bg-canvas focus:ring-4 focus:ring-soft-cloud focus:border-2 focus:border-ink";
+const LABEL = "mb-2 block text-xs font-medium uppercase tracking-wide text-mute";
+
 export function toFormValues(app?: Application): ApplicationFormValues {
   if (!app) return EMPTY_FORM;
   return {
@@ -74,59 +78,49 @@ export default function ApplicationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Job title *
-        </label>
+        <label className={LABEL}>Job title *</label>
         <input
           required
           value={values.job_title}
           onChange={(e) => update("job_title", e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Company *
-        </label>
+        <label className={LABEL}>Company *</label>
         <input
           required
           value={values.company}
           onChange={(e) => update("company", e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Location
-        </label>
+        <label className={LABEL}>Location</label>
         <input
           value={values.location}
           onChange={(e) => update("location", e.target.value)}
           placeholder="e.g. Remote, Bengaluru"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Experience level
-        </label>
+        <label className={LABEL}>Experience level</label>
         <input
           value={values.experience_level}
           onChange={(e) => update("experience_level", e.target.value)}
           placeholder="e.g. 2-4 years, Entry level"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Status
-        </label>
+        <label className={LABEL}>Status</label>
         <select
           value={values.status}
           onChange={(e) => update("status", e.target.value as ApplicationStatus)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         >
           {APPLICATION_STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -136,48 +130,40 @@ export default function ApplicationForm({
         </select>
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Date applied
-        </label>
+        <label className={LABEL}>Date applied</label>
         <input
           type="date"
           value={values.date_applied}
           onChange={(e) => update("date_applied", e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Job posting URL
-        </label>
+        <label className={LABEL}>Job posting URL</label>
         <input
           type="url"
           value={values.job_url}
           onChange={(e) => update("job_url", e.target.value)}
           placeholder="https://…"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Salary range
-        </label>
+        <label className={LABEL}>Salary range</label>
         <input
           value={values.salary_range}
           onChange={(e) => update("salary_range", e.target.value)}
           placeholder="e.g. ₹12-16 LPA"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className={FIELD}
         />
       </div>
       <div className="sm:col-span-2">
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          Notes
-        </label>
+        <label className={LABEL}>Notes</label>
         <textarea
           value={values.notes}
           onChange={(e) => update("notes", e.target.value)}
           rows={3}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className="w-full rounded-[24px] bg-soft-cloud px-4 py-3 text-base text-ink outline-none transition focus:bg-canvas focus:ring-4 focus:ring-soft-cloud focus:border-2 focus:border-ink"
         />
       </div>
 
@@ -185,7 +171,7 @@ export default function ApplicationForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
+          className="h-12 rounded-[30px] bg-ink px-8 text-base font-medium text-canvas transition active:scale-[0.98] active:opacity-50 disabled:opacity-50"
         >
           {submitting ? "Saving…" : submitLabel}
         </button>
@@ -193,7 +179,7 @@ export default function ApplicationForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+            className="h-12 rounded-[30px] bg-soft-cloud px-8 text-base font-medium text-ink transition active:scale-[0.98] active:opacity-50"
           >
             Cancel
           </button>

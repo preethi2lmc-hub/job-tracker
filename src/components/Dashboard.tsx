@@ -6,12 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { APPLICATION_STATUSES, type Application, type ApplicationStatus } from "@/lib/types";
 import ApplicationForm, { toFormValues, type ApplicationFormValues } from "./ApplicationForm";
 
-const STATUS_STYLES: Record<ApplicationStatus, string> = {
-  Wishlist: "bg-gray-100 text-gray-700",
-  Applied: "bg-blue-100 text-blue-700",
-  Interviewing: "bg-amber-100 text-amber-700",
-  Offer: "bg-green-100 text-green-700",
-  Rejected: "bg-red-100 text-red-700",
+const STATUS_COLOR: Record<ApplicationStatus, string> = {
+  Wishlist: "text-mute",
+  Applied: "text-ink",
+  Interviewing: "text-info",
+  Offer: "text-success",
+  Rejected: "text-sale",
 };
 
 export default function Dashboard({ userEmail }: { userEmail: string }) {
@@ -129,17 +129,17 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
   }, [applications]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <h1 className="text-xl font-semibold tracking-tight text-gray-900">
-            JOB TRACKER
+    <div className="min-h-screen bg-canvas">
+      <header className="border-b border-hairline">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-3 px-6 py-4">
+          <h1 className="whitespace-nowrap font-display text-3xl uppercase tracking-tight text-ink">
+            Job Tracker
           </h1>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">{userEmail}</span>
+            <span className="truncate text-sm text-mute">{userEmail}</span>
             <button
               onClick={handleLogout}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+              className="h-10 shrink-0 rounded-[30px] bg-soft-cloud px-6 text-sm font-medium whitespace-nowrap text-ink transition active:scale-[0.98] active:opacity-50"
             >
               Log out
             </button>
@@ -147,64 +147,60 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <main className="mx-auto max-w-5xl px-6 py-12">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap gap-2">
-            {(["All", ...APPLICATION_STATUSES] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`rounded-full px-3 py-1 text-sm font-medium transition ${
-                  statusFilter === s
-                    ? "bg-gray-900 text-white"
-                    : "bg-white text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-100"
-                }`}
-              >
-                {s} ({counts[s] ?? 0})
-              </button>
-            ))}
+            {(["All", ...APPLICATION_STATUSES] as const).map((s) => {
+              const active = statusFilter === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`h-10 rounded-[30px] border px-4 text-sm font-medium transition ${
+                    active
+                      ? "border-ink bg-ink text-canvas"
+                      : "border-hairline bg-canvas text-ink"
+                  }`}
+                >
+                  {s} ({counts[s] ?? 0})
+                </button>
+              );
+            })}
           </div>
 
           <button
             onClick={() => setShowAddForm((v) => !v)}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+            className="h-12 rounded-[30px] bg-ink px-8 text-base font-medium text-canvas transition active:scale-[0.98] active:opacity-50"
           >
             {showAddForm ? "Close" : "+ Add application"}
           </button>
         </div>
 
         {error && (
-          <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mb-6 border border-hairline px-4 py-3 text-sm font-medium text-sale">
             {error}
           </p>
         )}
 
         {showAddForm && (
-          <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-medium text-gray-900">
-              Add application
-            </h2>
+          <div className="mb-10 border-b border-hairline pb-10">
+            <h2 className="mb-6 text-xl font-medium text-ink">Add application</h2>
             <ApplicationForm submitLabel="Add application" onSubmit={handleAdd} />
           </div>
         )}
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading…</p>
+          <p className="text-sm text-mute">Loading…</p>
         ) : filtered.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+          <p className="border border-hairline bg-soft-cloud px-8 py-12 text-center text-sm text-mute">
             No applications yet. Click &ldquo;+ Add application&rdquo; to start tracking.
           </p>
         ) : (
-          <ul className="space-y-3">
+          <ul>
             {filtered.map((app) =>
               editingId === app.id ? (
-                <li
-                  key={app.id}
-                  className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-                >
-                  <h2 className="mb-4 text-lg font-medium text-gray-900">
-                    Edit application
-                  </h2>
+                <li key={app.id} className="border-b border-hairline py-8">
+                  <h2 className="mb-6 text-xl font-medium text-ink">Edit application</h2>
                   <ApplicationForm
                     initialValues={toFormValues(app)}
                     submitLabel="Save changes"
@@ -215,21 +211,17 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
               ) : (
                 <li
                   key={app.id}
-                  className="flex flex-col justify-between gap-3 rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center"
+                  className="flex flex-col justify-between gap-4 border-b border-hairline py-6 sm:flex-row sm:items-center"
                 >
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-medium text-gray-900">
-                        {app.job_title}
-                      </h3>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[app.status]}`}
-                      >
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-base font-medium text-ink">{app.job_title}</h3>
+                      <span className={`text-xs font-medium uppercase tracking-wide ${STATUS_COLOR[app.status]}`}>
                         {app.status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">{app.company}</p>
-                    <p className="mt-1 text-xs text-gray-400">
+                    <p className="mt-1 text-sm text-mute">{app.company}</p>
+                    <p className="mt-1 text-xs text-stone">
                       {[app.location, app.experience_level, app.salary_range]
                         .filter(Boolean)
                         .join(" · ")}
@@ -240,7 +232,7 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
                         href={app.job_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-block text-xs text-blue-600 underline"
+                        className="mt-2 inline-block text-xs font-medium text-ink underline underline-offset-2"
                       >
                         View posting
                       </a>
@@ -249,13 +241,13 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
                   <div className="flex shrink-0 gap-2">
                     <button
                       onClick={() => setEditingId(app.id)}
-                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                      className="h-10 rounded-[30px] bg-soft-cloud px-6 text-sm font-medium text-ink transition active:scale-[0.98] active:opacity-50"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(app.id)}
-                      className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                      className="h-10 rounded-[30px] border border-hairline px-6 text-sm font-medium text-sale transition active:scale-[0.98] active:opacity-50"
                     >
                       Delete
                     </button>

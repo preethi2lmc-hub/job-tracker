@@ -35,16 +35,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-2xl font-semibold text-gray-900">
-          JOB TRACKER
-        </h1>
-        <p className="mb-6 text-sm text-gray-500">Log in to your account</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-soft-cloud px-6">
+      <h1 className="mb-2 whitespace-nowrap font-display text-[48px] leading-[0.9] tracking-tight text-ink uppercase sm:text-[64px] md:text-[96px]">
+        Job Tracker
+      </h1>
+      <p className="mb-10 text-base text-mute">Log in to your account</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="w-full max-w-sm bg-canvas p-8">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-mute">
               Email
             </label>
             <input
@@ -52,11 +52,11 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+              className="h-12 w-full rounded-[24px] bg-soft-cloud px-4 text-base text-ink outline-none transition focus:bg-canvas focus:ring-4 focus:ring-soft-cloud focus:border-2 focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-mute">
               Password
             </label>
             <input
@@ -64,24 +64,24 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+              className="h-12 w-full rounded-[24px] bg-soft-cloud px-4 text-base text-ink outline-none transition focus:bg-canvas focus:ring-4 focus:ring-soft-cloud focus:border-2 focus:border-ink"
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm font-medium text-sale">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
+            className="h-12 w-full rounded-[30px] bg-ink text-base font-medium text-canvas transition active:scale-[0.98] active:opacity-50 disabled:opacity-50"
           >
             {loading ? "Logging in…" : "Log in"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-8 text-center text-sm text-mute">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-gray-900 underline">
+          <Link href="/signup" className="font-medium text-ink underline underline-offset-2">
             Sign up
           </Link>
         </p>
