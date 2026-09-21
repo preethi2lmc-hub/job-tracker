@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { APPLICATION_STATUSES, type Application, type ApplicationStatus } from "@/lib/types";
 import ApplicationForm, { toFormValues, type ApplicationFormValues } from "./ApplicationForm";
+import JobSearch from "./JobSearch";
+import type { JobSearchResult } from "@/app/api/jobs/search/route";
 
 const STATUS_COLOR: Record<ApplicationStatus, string> = {
   Wishlist: "text-mute",
@@ -26,6 +28,7 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showJobSearch, setShowJobSearch] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "All">("All");
 
@@ -60,6 +63,33 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
     }
 
     setShowAddForm(false);
+    await loadApplications();
+  }
+
+  async function handleQuickAddFromSearch(job: JobSearchResult, status: "Wishlist" | "Applied") {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const res = await fetch("/api/applications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        job_title: job.title,
+        company: job.company,
+        location: job.location,
+        experience_level: "",
+        status,
+        date_applied: status === "Applied" ? today : "",
+        job_url: job.url,
+        salary_range: "",
+        notes: "",
+      }),
+    });
+
+    if (!res.ok) {
+      setError(await extractError(res));
+      return;
+    }
+
     await loadApplications();
   }
 
@@ -152,18 +182,33 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
             })}
           </div>
 
-          <button
-            onClick={() => setShowAddForm((v) => !v)}
-            className="h-12 rounded-[30px] bg-ink px-8 text-base font-medium text-canvas transition active:scale-[0.98] active:opacity-50"
-          >
-            {showAddForm ? "Close" : "+ Add application"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowJobSearch((v) => !v)}
+              className="h-12 rounded-[30px] border border-hairline bg-canvas px-8 text-base font-medium text-ink transition active:scale-[0.98] active:opacity-50"
+            >
+              {showJobSearch ? "Close" : "Find jobs"}
+            </button>
+            <button
+              onClick={() => setShowAddForm((v) => !v)}
+              className="h-12 rounded-[30px] bg-ink px-8 text-base font-medium text-canvas transition active:scale-[0.98] active:opacity-50"
+            >
+              {showAddForm ? "Close" : "+ Add application"}
+            </button>
+          </div>
         </div>
 
         {error && (
           <p className="mb-6 border border-hairline px-4 py-3 text-sm font-medium text-sale">
             {error}
           </p>
+        )}
+
+        {showJobSearch && (
+          <div className="mb-10 border-b border-hairline pb-10">
+            <h2 className="mb-6 text-xl font-medium text-ink">Find jobs near you</h2>
+            <JobSearch onQuickAdd={handleQuickAddFromSearch} />
+          </div>
         )}
 
         {showAddForm && (

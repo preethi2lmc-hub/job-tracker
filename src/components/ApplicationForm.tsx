@@ -27,9 +27,9 @@ const EMPTY_FORM: ApplicationFormValues = {
   notes: "",
 };
 
-const FIELD =
+export const FIELD =
   "h-12 w-full rounded-[24px] bg-soft-cloud px-4 text-base text-ink outline-none transition focus:bg-canvas focus:ring-4 focus:ring-soft-cloud focus:border-2 focus:border-ink";
-const LABEL = "mb-2 block text-xs font-medium uppercase tracking-wide text-mute";
+export const LABEL = "mb-2 block text-xs font-medium uppercase tracking-wide text-mute";
 
 export function toFormValues(app?: Application): ApplicationFormValues {
   if (!app) return EMPTY_FORM;
