@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "next-auth/react";
 import { APPLICATION_STATUSES, type Application, type ApplicationStatus } from "@/lib/types";
 import ApplicationForm, { toFormValues, type ApplicationFormValues } from "./ApplicationForm";
 
@@ -14,8 +14,12 @@ const STATUS_COLOR: Record<ApplicationStatus, string> = {
   Rejected: "text-sale",
 };
 
+async function extractError(res: Response) {
+  const data = await res.json().catch(() => null);
+  return data?.error ?? "Something went wrong. Please try again.";
+}
+
 export default function Dashboard({ userEmail }: { userEmail: string }) {
-  const supabase = createClient();
   const router = useRouter();
 
   const [applications, setApplications] = useState<Application[]>([]);
@@ -33,38 +37,25 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
   async function loadApplications() {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("applications")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const res = await fetch("/api/applications");
 
-    if (error) {
-      setError(error.message);
+    if (!res.ok) {
+      setError(await extractError(res));
     } else {
-      setApplications(data as Application[]);
+      setApplications(await res.json());
     }
     setLoading(false);
   }
 
   async function handleAdd(values: ApplicationFormValues) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { error } = await supabase.from("applications").insert({
-      ...values,
-      location: values.location || null,
-      experience_level: values.experience_level || null,
-      date_applied: values.date_applied || null,
-      job_url: values.job_url || null,
-      salary_range: values.salary_range || null,
-      notes: values.notes || null,
-      user_id: user.id,
+    const res = await fetch("/api/applications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
     });
 
-    if (error) {
-      setError(error.message);
+    if (!res.ok) {
+      setError(await extractError(res));
       return;
     }
 
@@ -73,21 +64,14 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
   }
 
   async function handleUpdate(id: string, values: ApplicationFormValues) {
-    const { error } = await supabase
-      .from("applications")
-      .update({
-        ...values,
-        location: values.location || null,
-        experience_level: values.experience_level || null,
-        date_applied: values.date_applied || null,
-        job_url: values.job_url || null,
-        salary_range: values.salary_range || null,
-        notes: values.notes || null,
-      })
-      .eq("id", id);
+    const res = await fetch(`/api/applications/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
 
-    if (error) {
-      setError(error.message);
+    if (!res.ok) {
+      setError(await extractError(res));
       return;
     }
 
@@ -98,16 +82,16 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
   async function handleDelete(id: string) {
     if (!confirm("Delete this application? This cannot be undone.")) return;
 
-    const { error } = await supabase.from("applications").delete().eq("id", id);
-    if (error) {
-      setError(error.message);
+    const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError(await extractError(res));
       return;
     }
     await loadApplications();
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    await signOut({ redirect: false });
     router.push("/login");
     router.refresh();
   }

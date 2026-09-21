@@ -2,38 +2,49 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function SignupPage() {
-  const supabase = createClient();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
-    const { error } = await supabase.auth.signUp({
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setLoading(false);
+      setError(data?.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+
+    const result = await signIn("credentials", {
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+      redirect: false,
     });
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
+    if (result?.error) {
+      setError("Account created — please log in.");
       return;
     }
 
-    setMessage("Check your email to confirm your account before logging in.");
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -72,7 +83,6 @@ export default function SignupPage() {
           </div>
 
           {error && <p className="text-sm font-medium text-sale">{error}</p>}
-          {message && <p className="text-sm font-medium text-success">{message}</p>}
 
           <button
             type="submit"
