@@ -77,11 +77,11 @@ export default function JobSearch({
           />
         </div>
         <div>
-          <label className={LABEL}>Keyword (optional)</label>
+          <label className={LABEL}>Job title / role (optional)</label>
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="e.g. frontend, product manager"
+            placeholder="e.g. frontend engineer, product manager"
             className={FIELD}
           />
         </div>

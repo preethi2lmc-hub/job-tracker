@@ -5,6 +5,8 @@ interface MuseJob {
   name: string;
   publication_date: string;
   locations: { name: string }[];
+  categories: { name: string }[];
+  levels: { name: string }[];
   company: { name: string };
   refs: { landing_page: string };
 }
@@ -74,27 +76,47 @@ async function fetchMuseJobs(locationQuery: string): Promise<MuseJob[]> {
   return jobs;
 }
 
-function filterByCity(jobs: MuseJob[], city: string, keyword: string) {
+interface LocationMatch {
+  job: MuseJob;
+  matchingLocation: string;
+}
+
+function matchByCity(jobs: MuseJob[], city: string): LocationMatch[] {
   const cityLower = city.toLowerCase();
-  const results: JobSearchResult[] = [];
+  const matches: LocationMatch[] = [];
 
   for (const job of jobs) {
     const matchingLocation = job.locations.find((l) =>
       l.name.toLowerCase().includes(cityLower)
     );
-    if (!matchingLocation) continue;
-    if (keyword && !job.name.toLowerCase().includes(keyword)) continue;
+    if (matchingLocation) matches.push({ job, matchingLocation: matchingLocation.name });
+  }
+  return matches;
+}
 
-    results.push({
+// Matches the role/title keyword against the job title itself plus its
+// category and seniority level - e.g. searching "engineering" should also
+// surface a "Backend Developer" role filed under the Software Engineering
+// category, not just titles containing that literal word.
+function jobMatchesKeyword(job: MuseJob, keyword: string): boolean {
+  if (!keyword) return true;
+  if (job.name.toLowerCase().includes(keyword)) return true;
+  if (job.categories?.some((c) => c.name.toLowerCase().includes(keyword))) return true;
+  if (job.levels?.some((l) => l.name.toLowerCase().includes(keyword))) return true;
+  return false;
+}
+
+function toResults(matches: LocationMatch[], keyword: string): JobSearchResult[] {
+  return matches
+    .filter(({ job }) => jobMatchesKeyword(job, keyword))
+    .map(({ job, matchingLocation }) => ({
       id: String(job.id),
       title: job.name,
       company: job.company?.name ?? "Unknown company",
-      location: matchingLocation.name,
+      location: matchingLocation,
       url: job.refs?.landing_page ?? "",
       publication_date: job.publication_date,
-    });
-  }
-  return results;
+    }));
 }
 
 // Resolves a bare city name (e.g. "Chennai") to the location suffix Muse's
@@ -139,16 +161,19 @@ export async function GET(request: Request) {
 
   try {
     let jobs = await fetchMuseJobs(location);
-    let results = filterByCity(jobs, city, keyword);
+    let locationMatches = matchByCity(jobs, city);
 
-    if (results.length === 0) {
+    // Only retry with a resolved location suffix if the CITY itself found
+    // nothing - a keyword that simply didn't match shouldn't trigger this.
+    if (locationMatches.length === 0) {
       const suffix = await geocodeLocationSuffix(city);
       if (suffix) {
         jobs = await fetchMuseJobs(`${city}, ${suffix}`);
-        results = filterByCity(jobs, city, keyword);
+        locationMatches = matchByCity(jobs, city);
       }
     }
 
+    const results = toResults(locationMatches, keyword);
     results.sort((a, b) => b.publication_date.localeCompare(a.publication_date));
 
     return NextResponse.json(results.slice(0, 20));
