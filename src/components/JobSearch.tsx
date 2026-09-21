@@ -98,7 +98,7 @@ export default function JobSearch({
 
       {results && results.length === 0 && !error && (
         <p className="mt-6 border border-hairline bg-soft-cloud px-8 py-10 text-center text-sm text-mute">
-          No jobs found near &ldquo;{location}&rdquo;. Try a nearby city or a broader keyword.
+          No jobs currently listed near &ldquo;{location}&rdquo; in our search source. Try a nearby larger city, a broader keyword, or check back later — new postings are added constantly.
         </p>
       )}
 

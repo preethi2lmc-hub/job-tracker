@@ -26,7 +26,11 @@ export interface JobSearchResult {
 // city (via OpenStreetMap's free Nominatim, also no key) to find the right
 // suffix and retry once.
 const MUSE_API = "https://www.themuse.com/api/public/jobs";
-const PAGES_TO_FETCH = 3;
+// Even with the exact location tag, matching jobs are blended in among a
+// much larger relevance-sorted set rather than filtered to just that city -
+// smaller cities' matches can be buried past page 3. Fetched concurrently,
+// so the added latency is small.
+const PAGES_TO_FETCH = 10;
 
 // Nominatim gives full state names ("Texas"); Muse's US location tags use
 // the 2-letter abbreviation ("TX").
