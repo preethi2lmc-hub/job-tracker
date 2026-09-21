@@ -19,10 +19,108 @@ export interface JobSearchResult {
 }
 
 // Free public jobs API (https://www.themuse.com/developers/api/v2) - no key
-// required. Its own `location` query param is a loose relevance hint, not a
-// hard filter, so we fetch a few pages and filter properly ourselves below.
+// required. Its `location` query param only matches when given the EXACT
+// tag companies post under - "Chennai" alone silently falls back to
+// unrelated results, but "Chennai, India" (or "Austin, TX" for US cities)
+// works. So: try the raw input first, and if nothing matches, geocode the
+// city (via OpenStreetMap's free Nominatim, also no key) to find the right
+// suffix and retry once.
 const MUSE_API = "https://www.themuse.com/api/public/jobs";
 const PAGES_TO_FETCH = 3;
+
+// Nominatim gives full state names ("Texas"); Muse's US location tags use
+// the 2-letter abbreviation ("TX").
+const US_STATE_ABBREVIATIONS: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", florida: "FL", georgia: "GA",
+  hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA",
+  kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS",
+  missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK",
+  oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+  virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+  wyoming: "WY", "district of columbia": "DC",
+};
+
+async function fetchMuseJobs(locationQuery: string): Promise<MuseJob[]> {
+  const pages = await Promise.all(
+    Array.from({ length: PAGES_TO_FETCH }, (_, i) =>
+      fetch(
+        `${MUSE_API}?page=${i + 1}&location=${encodeURIComponent(locationQuery)}`,
+        { signal: AbortSignal.timeout(8000) }
+      )
+        .then((res) => (res.ok ? res.json() : { results: [] }))
+        .catch(() => ({ results: [] }))
+    )
+  );
+
+  const seen = new Set<number>();
+  const jobs: MuseJob[] = [];
+  for (const page of pages) {
+    for (const job of (page.results ?? []) as MuseJob[]) {
+      if (!seen.has(job.id)) {
+        seen.add(job.id);
+        jobs.push(job);
+      }
+    }
+  }
+  return jobs;
+}
+
+function filterByCity(jobs: MuseJob[], city: string, keyword: string) {
+  const cityLower = city.toLowerCase();
+  const results: JobSearchResult[] = [];
+
+  for (const job of jobs) {
+    const matchingLocation = job.locations.find((l) =>
+      l.name.toLowerCase().includes(cityLower)
+    );
+    if (!matchingLocation) continue;
+    if (keyword && !job.name.toLowerCase().includes(keyword)) continue;
+
+    results.push({
+      id: String(job.id),
+      title: job.name,
+      company: job.company?.name ?? "Unknown company",
+      location: matchingLocation.name,
+      url: job.refs?.landing_page ?? "",
+      publication_date: job.publication_date,
+    });
+  }
+  return results;
+}
+
+// Resolves a bare city name (e.g. "Chennai") to the location suffix Muse's
+// tags actually use ("India", or a US state's abbreviation like "TX").
+async function geocodeLocationSuffix(city: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        city
+      )}&format=jsonv2&addressdetails=1&limit=1`,
+      {
+        headers: { "User-Agent": "job-tracker-app (job search feature)" },
+        signal: AbortSignal.timeout(5000),
+      }
+    );
+    if (!res.ok) return null;
+
+    const results = await res.json();
+    const address = results?.[0]?.address;
+    if (!address) return null;
+
+    if (address.country_code === "us") {
+      const stateAbbr = US_STATE_ABBREVIATIONS[(address.state ?? "").toLowerCase()];
+      return stateAbbr ?? address.country ?? null;
+    }
+    return address.country ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -33,40 +131,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "location is required" }, { status: 400 });
   }
 
+  const city = location.split(",")[0].trim();
+
   try {
-    const pages = await Promise.all(
-      Array.from({ length: PAGES_TO_FETCH }, (_, i) =>
-        fetch(
-          `${MUSE_API}?page=${i + 1}&location=${encodeURIComponent(location)}`,
-          { signal: AbortSignal.timeout(8000) }
-        ).then((res) => (res.ok ? res.json() : { results: [] }))
-      )
-    );
+    let jobs = await fetchMuseJobs(location);
+    let results = filterByCity(jobs, city, keyword);
 
-    const locationLower = location.toLowerCase();
-    const seen = new Set<number>();
-    const results: JobSearchResult[] = [];
-
-    for (const page of pages) {
-      for (const job of (page.results ?? []) as MuseJob[]) {
-        if (seen.has(job.id)) continue;
-
-        const matchingLocation = job.locations.find((l) =>
-          l.name.toLowerCase().includes(locationLower)
-        );
-        if (!matchingLocation) continue;
-
-        if (keyword && !job.name.toLowerCase().includes(keyword)) continue;
-
-        seen.add(job.id);
-        results.push({
-          id: String(job.id),
-          title: job.name,
-          company: job.company?.name ?? "Unknown company",
-          location: matchingLocation.name,
-          url: job.refs?.landing_page ?? "",
-          publication_date: job.publication_date,
-        });
+    if (results.length === 0) {
+      const suffix = await geocodeLocationSuffix(city);
+      if (suffix) {
+        jobs = await fetchMuseJobs(`${city}, ${suffix}`);
+        results = filterByCity(jobs, city, keyword);
       }
     }
 
