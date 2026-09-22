@@ -42,6 +42,26 @@ export async function POST(request: Request) {
     ? body.status
     : "Wishlist";
 
+  const jobUrl: string | null = body.job_url || null;
+
+  const db = await getDb();
+
+  // Guard against duplicates from the job-search quick-add (e.g. a fast
+  // double-click racing past the client-side check) - only for entries with
+  // a job_url, so manually-added applications (which may share a title and
+  // company legitimately, e.g. reapplying) are never blocked.
+  if (jobUrl) {
+    const existing = await db
+      .collection("applications")
+      .findOne({ userId: session.user.id, job_url: jobUrl });
+    if (existing) {
+      return NextResponse.json(
+        { alreadyExists: true, ...serialize(existing) },
+        { status: 200 }
+      );
+    }
+  }
+
   const now = new Date();
   const doc = {
     userId: session.user.id,
@@ -51,14 +71,13 @@ export async function POST(request: Request) {
     experience_level: body.experience_level || null,
     status,
     date_applied: body.date_applied || null,
-    job_url: body.job_url || null,
+    job_url: jobUrl,
     salary_range: body.salary_range || null,
     notes: body.notes || null,
     created_at: now,
     updated_at: now,
   };
 
-  const db = await getDb();
   const result = await db.collection("applications").insertOne(doc);
 
   return NextResponse.json(serialize({ _id: result.insertedId, ...doc }), { status: 201 });

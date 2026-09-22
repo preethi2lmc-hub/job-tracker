@@ -66,7 +66,10 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
     await loadApplications();
   }
 
-  async function handleQuickAddFromSearch(job: JobSearchResult, status: "Wishlist" | "Applied") {
+  async function handleQuickAddFromSearch(
+    job: JobSearchResult,
+    status: "Wishlist" | "Applied"
+  ): Promise<{ ok: true; alreadyExists: boolean } | { ok: false; error: string }> {
     const today = new Date().toISOString().slice(0, 10);
 
     const res = await fetch("/api/applications", {
@@ -86,11 +89,14 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
     });
 
     if (!res.ok) {
-      setError(await extractError(res));
-      return;
+      const error = await extractError(res);
+      setError(error);
+      return { ok: false, error };
     }
 
+    const data = await res.json();
     await loadApplications();
+    return { ok: true, alreadyExists: Boolean(data?.alreadyExists) };
   }
 
   async function handleUpdate(id: string, values: ApplicationFormValues) {
@@ -140,6 +146,17 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
       c[s] = applications.filter((a) => a.status === s).length;
     }
     return c;
+  }, [applications]);
+
+  // Lets the job search panel know, per posting URL, whether it's already
+  // tracked (and at what status) so it can show the right popup instead of
+  // creating a duplicate.
+  const trackedJobUrls = useMemo(() => {
+    const map = new Map<string, ApplicationStatus>();
+    for (const app of applications) {
+      if (app.job_url) map.set(app.job_url, app.status);
+    }
+    return map;
   }, [applications]);
 
   return (
@@ -207,7 +224,7 @@ export default function Dashboard({ userEmail }: { userEmail: string }) {
         {showJobSearch && (
           <div className="mb-10 border-b border-hairline pb-10">
             <h2 className="mb-6 text-xl font-medium text-ink">Find jobs near you</h2>
-            <JobSearch onQuickAdd={handleQuickAddFromSearch} />
+            <JobSearch onQuickAdd={handleQuickAddFromSearch} trackedJobUrls={trackedJobUrls} />
           </div>
         )}
 
